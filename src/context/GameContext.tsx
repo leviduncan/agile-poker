@@ -139,10 +139,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    socket.on('gameUpdate', onGameUpdate);
+    let cleanupFunction: (() => void) | undefined;
+    
+    // In our mock socket implementation, the .on() method returns a cleanup function
+    cleanupFunction = socket.on('gameUpdate', onGameUpdate);
 
     return () => {
-      socket.off('gameUpdate', onGameUpdate);
+      // Use the cleanup function returned by socket.on instead of socket.off
+      if (cleanupFunction) {
+        cleanupFunction();
+      }
     };
   }, [socket, currentPlayer]);
 

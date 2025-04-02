@@ -38,6 +38,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
         };
         window.addEventListener('storage', listener);
+        // Return a cleanup function that removes the event listener
         return () => window.removeEventListener('storage', listener);
       },
       emit: (event: string, data: any) => {
