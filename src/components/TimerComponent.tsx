@@ -35,7 +35,7 @@ const TimerComponent: React.FC = () => {
     return isHost ? (
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="text-white border-white hover:bg-white/20">
+          <Button variant="outline" className="text-gray-900 hover:text-white border-white hover:bg-white/20">
             <Timer className="h-4 w-4 mr-2" />
             Timer
           </Button>

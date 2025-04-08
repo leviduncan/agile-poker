@@ -24,7 +24,7 @@ const Header: React.FC = () => {
             <Button 
               variant="outline" 
               onClick={copyInviteLink}
-              className="text-white border-white hover:bg-white/20"
+              className="text-gray-900 hover:text-white border-white hover:bg-white/20"
             >
               Invite Players
             </Button>
