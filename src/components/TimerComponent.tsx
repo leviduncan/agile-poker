@@ -61,7 +61,7 @@ const TimerComponent: React.FC = () => {
     return isHost && isVoting ? <Button variant="outline" onClick={startTimer} className="text-white border-white hover:bg-white/20">
         <Play className="h-4 w-4 mr-2" />
         Start Timer ({game?.timerDuration}s)
-      </Button> : <Button variant="outline" disabled className="border-white text-slate-950 bg-slate-50">
+      </Button> : <Button variant="outline" disabled className="hover-lift hover-glow">
         <Timer className="h-4 w-4 mr-2" />
         Timer Ready
       </Button>;
