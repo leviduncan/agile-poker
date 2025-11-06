@@ -10,7 +10,7 @@ export const generatePlayerGradient = (name: string): string => {
   const h1 = Math.abs(hash % 360);
   const h2 = (h1 + 60) % 360; // Complementary hue
   
-  return `linear-gradient(135deg, hsl(${h1}, 70%, 60%), hsl(${h2}, 70%, 50%))`;
+  return `linear-gradient(135deg, hsl(${h1}, 65%, 72%), hsl(${h2}, 65%, 68%))`;
 };
 
 export const getPlayerInitials = (name: string): string => {
