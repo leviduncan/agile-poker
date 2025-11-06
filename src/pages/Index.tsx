@@ -57,7 +57,7 @@ const Index = () => {
 
             <motion.h1 
               variants={fadeIn}
-              className="text-5xl md:text-7xl font-bold mb-6 gradient-text"
+              className="text-5xl md:text-7xl font-bold mb-6 gradient-text leading-relaxed"
             >
               Agile Poker
             </motion.h1>
