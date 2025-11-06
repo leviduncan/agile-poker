@@ -1,12 +1,14 @@
-
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useGame } from '@/context/GameContext';
 import Header from '@/components/Header';
 import PlayerList from '@/components/PlayerList';
 import CurrentStory from '@/components/CurrentStory';
 import VotingCards from '@/components/VotingCards';
 import StoryList from '@/components/StoryList';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import { staggerContainer, fadeIn } from '@/lib/animations';
 
 const GameRoom: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -25,33 +27,40 @@ const GameRoom: React.FC = () => {
       <div className="min-h-screen flex flex-col">
         <Header />
         <div className="flex-1 flex items-center justify-center">
-          <p>Loading game...</p>
+          <LoadingSpinner size="lg" />
         </div>
       </div>
     );
   }
   
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-accent/5">
       <Header />
       
       <main className="flex-1 p-4 md:p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">{game.name}</h1>
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={staggerContainer}
+          className="max-w-6xl mx-auto"
+        >
+          <motion.div variants={fadeIn} className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold gradient-text">{game.name}</h1>
             <StoryList />
-          </div>
+          </motion.div>
           
-          <PlayerList />
+          <motion.div variants={fadeIn}>
+            <PlayerList />
+          </motion.div>
           
-          <div className="my-8">
+          <motion.div variants={fadeIn} className="my-8">
             <CurrentStory />
-          </div>
+          </motion.div>
           
-          <div className="mt-auto">
+          <motion.div variants={fadeIn} className="mt-auto">
             <VotingCards />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </main>
     </div>
   );

@@ -1,48 +1,83 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Users, Clock, ListTodo } from 'lucide-react';
 import Header from '@/components/Header';
+import heroBackground from '@/assets/hero-background.jpg';
+import { fadeIn, staggerContainer } from '@/lib/animations';
 
 const Index = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
       
-      <main className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="max-w-3xl w-full text-center">
-          <h1 className="text-4xl font-bold text-poker-text mb-4">
-            Agile Poker
-          </h1>
-          
-          <p className="text-xl text-gray-600 mb-8">
-            A real-time Planning Poker app for development teams to collaboratively estimate task complexity
-          </p>
-          
-          <div className="flex flex-col md:flex-row justify-center gap-4">
-            <Link to="/create">
-              <Button className="text-lg px-6 py-6 bg-poker-primary hover:bg-poker-secondary">
-                Start a New Game
-                <ArrowRight className="ml-2" />
-              </Button>
-            </Link>
-          </div>
-          
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FeatureCard 
-              title="Real-time Collaboration" 
-              description="Synchronize votes across your entire team in real-time, no refreshing needed."
-            />
-            <FeatureCard 
-              title="Multiple Stories" 
-              description="Add and manage multiple user stories within a single planning session."
-            />
-            <FeatureCard 
-              title="Voting Timer" 
-              description="Keep meetings efficient with an optional countdown timer for voting rounds."
-            />
-          </div>
+      {/* Hero Section with Background */}
+      <main className="flex-1 relative overflow-hidden">
+        {/* Background Image with Overlay */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${heroBackground})` }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-background/95 via-background/90 to-background/80" />
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-6">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="max-w-4xl w-full text-center"
+          >
+            <motion.h1 
+              variants={fadeIn}
+              className="text-5xl md:text-7xl font-bold mb-6 gradient-text"
+            >
+              Agile Poker
+            </motion.h1>
+            
+            <motion.p 
+              variants={fadeIn}
+              className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto"
+            >
+              A beautiful real-time Planning Poker app for development teams to collaboratively estimate task complexity
+            </motion.p>
+            
+            <motion.div variants={fadeIn}>
+              <Link to="/create">
+                <Button 
+                  size="lg"
+                  className="text-lg px-8 py-6 hover-lift hover-glow animate-glow-pulse"
+                >
+                  Start a New Game
+                  <ArrowRight className="ml-2" />
+                </Button>
+              </Link>
+            </motion.div>
+            
+            {/* Feature Cards */}
+            <motion.div 
+              variants={staggerContainer}
+              className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6"
+            >
+              <FeatureCard 
+                icon={<Users className="h-8 w-8" />}
+                title="Real-time Collaboration" 
+                description="Synchronize votes across your entire team in real-time, no refreshing needed."
+              />
+              <FeatureCard 
+                icon={<ListTodo className="h-8 w-8" />}
+                title="Multiple Stories" 
+                description="Add and manage multiple user stories within a single planning session."
+              />
+              <FeatureCard 
+                icon={<Clock className="h-8 w-8" />}
+                title="Voting Timer" 
+                description="Keep meetings efficient with an optional countdown timer for voting rounds."
+              />
+            </motion.div>
+          </motion.div>
         </div>
       </main>
     </div>
@@ -50,16 +85,24 @@ const Index = () => {
 };
 
 interface FeatureCardProps {
+  icon: React.ReactNode;
   title: string;
   description: string;
 }
 
-const FeatureCard: React.FC<FeatureCardProps> = ({ title, description }) => {
+const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description }) => {
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <h3 className="text-lg font-semibold mb-2">{title}</h3>
-      <p className="text-gray-600">{description}</p>
-    </div>
+    <motion.div
+      variants={fadeIn}
+      whileHover={{ y: -5 }}
+      className="glass p-8 rounded-2xl shadow-lg hover-glow transition-all duration-300 group"
+    >
+      <div className="text-primary mb-4 group-hover:scale-110 transition-transform duration-300">
+        {icon}
+      </div>
+      <h3 className="text-lg font-semibold mb-3">{title}</h3>
+      <p className="text-muted-foreground">{description}</p>
+    </motion.div>
   );
 };
 
