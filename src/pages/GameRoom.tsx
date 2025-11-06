@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useGame } from '@/context/GameContext';
 import Header from '@/components/Header';
 import PlayerList from '@/components/PlayerList';
-import CurrentStory from '@/components/CurrentStory';
+import StoryStack from '@/components/StoryStack';
 import VotingCards from '@/components/VotingCards';
 import StoryList from '@/components/StoryList';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -54,7 +54,7 @@ const GameRoom: React.FC = () => {
           </motion.div>
           
           <motion.div variants={fadeIn} className="my-8">
-            <CurrentStory />
+            <StoryStack />
           </motion.div>
           
           <motion.div variants={fadeIn} className="mt-auto">
