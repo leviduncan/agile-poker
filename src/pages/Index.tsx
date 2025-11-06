@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Users, Clock, ListTodo } from 'lucide-react';
 import Header from '@/components/Header';
 import Logo from '@/components/Logo';
+import FloatingCards from '@/components/FloatingCards';
 import heroBackground from '@/assets/hero-background.jpg';
 import { fadeIn, staggerContainer } from '@/lib/animations';
 
@@ -22,6 +23,9 @@ const Index = () => {
         >
           <div className="absolute inset-0 bg-gradient-to-br from-background/95 via-background/90 to-background/80" />
         </div>
+
+        {/* Floating Cards Background */}
+        <FloatingCards />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-6">
