@@ -1,8 +1,8 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '@/context/GameContext';
 import PlayerAvatar from '@/components/PlayerAvatar';
-import { staggerContainer, fadeIn } from '@/lib/animations';
+import { staggerContainer } from '@/lib/animations';
 import emptyPlayersImage from '@/assets/empty-players.jpg';
 import EmptyState from '@/components/EmptyState';
 
@@ -46,30 +46,52 @@ const PlayerList: React.FC = () => {
       >
         {/* Players positioned in an oval */}
         <div className="absolute inset-0">
-          {game.players.map((player, index) => {
-            const { x, y } = getPlayerPosition(index, game.players.length);
-            return (
-              <motion.div
-                key={player.id}
-                variants={fadeIn}
-                className="absolute"
-                style={{
-                  left: `${x}%`,
-                  top: `${y}%`,
-                  transform: 'translate(-50%, -50%)'
-                }}
-              >
-                <PlayerAvatar
-                  name={player.name}
-                  isHost={player.isHost}
-                  hasVoted={!!player.vote && !game.revealCards}
-                  vote={player.vote}
-                  isRevealed={game.revealCards}
-                  isCurrentPlayer={player.id === currentPlayer?.id}
-                />
-              </motion.div>
-            );
-          })}
+          <AnimatePresence mode="popLayout">
+            {game.players.map((player, index) => {
+              const { x, y } = getPlayerPosition(index, game.players.length);
+              return (
+                <motion.div
+                  key={player.id}
+                  initial={{ 
+                    opacity: 0, 
+                    scale: 0.5,
+                    y: -50
+                  }}
+                  animate={{ 
+                    opacity: 1, 
+                    scale: 1,
+                    y: 0
+                  }}
+                  exit={{ 
+                    opacity: 0, 
+                    scale: 0.5,
+                    y: 50
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 25,
+                    opacity: { duration: 0.3 }
+                  }}
+                  className="absolute"
+                  style={{
+                    left: `${x}%`,
+                    top: `${y}%`,
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                >
+                  <PlayerAvatar
+                    name={player.name}
+                    isHost={player.isHost}
+                    hasVoted={!!player.vote && !game.revealCards}
+                    vote={player.vote}
+                    isRevealed={game.revealCards}
+                    isCurrentPlayer={player.id === currentPlayer?.id}
+                  />
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       </motion.div>
     </div>
