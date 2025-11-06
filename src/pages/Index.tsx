@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Users, Clock, ListTodo } from 'lucide-react';
 import Header from '@/components/Header';
+import Logo from '@/components/Logo';
 import heroBackground from '@/assets/hero-background.jpg';
 import { fadeIn, staggerContainer } from '@/lib/animations';
 
@@ -30,6 +31,26 @@ const Index = () => {
             variants={staggerContainer}
             className="max-w-4xl w-full text-center"
           >
+            <motion.div
+              initial={{ opacity: 0, y: -30, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="flex justify-center mb-8"
+            >
+              <motion.div
+                animate={{ 
+                  rotateY: [0, 360],
+                  scale: [1, 1.05, 1]
+                }}
+                transition={{
+                  rotateY: { duration: 2, delay: 0.5 },
+                  scale: { duration: 2, delay: 0.5 }
+                }}
+              >
+                <Logo size="lg" animated={false} />
+              </motion.div>
+            </motion.div>
+
             <motion.h1 
               variants={fadeIn}
               className="text-5xl md:text-7xl font-bold mb-6 gradient-text"
