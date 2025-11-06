@@ -80,7 +80,7 @@ const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
         )}
       </motion.div>
 
-      <span className="text-sm font-semibold truncate max-w-[100px] text-foreground drop-shadow-md px-2 py-1 bg-background/80 backdrop-blur-sm rounded-full">
+      <span className="text-sm font-semibold truncate max-w-[100px] text-slate-900 drop-shadow-md px-2 py-1 bg-white dark:bg-white/90 rounded-full">
         {name}
       </span>
 

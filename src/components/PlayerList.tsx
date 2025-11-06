@@ -33,58 +33,45 @@ const PlayerList: React.FC = () => {
 
   return (
     <div className="relative w-full max-w-5xl mx-auto mb-8 px-4">
-      {/* Poker Table Container */}
-      <div className="relative">
-        {/* Wooden Rail */}
-        <div className="poker-table-rail rounded-[50%] p-4 md:p-6">
-          {/* Green Felt Surface */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={staggerContainer}
-            className="poker-table-felt rounded-[50%] relative"
-            style={{
-              width: '100%',
-              paddingBottom: '62.5%', // 16:10 aspect ratio for oval
-              minHeight: '300px'
-            }}
-          >
-            {/* Players positioned around the table */}
-            <div className="absolute inset-0">
-              {game.players.map((player, index) => {
-                const { x, y } = getPlayerPosition(index, game.players.length);
-                return (
-                  <motion.div
-                    key={player.id}
-                    variants={fadeIn}
-                    className="absolute"
-                    style={{
-                      left: `${x}%`,
-                      top: `${y}%`,
-                      transform: 'translate(-50%, -50%)'
-                    }}
-                  >
-                    <PlayerAvatar
-                      name={player.name}
-                      isHost={player.isHost}
-                      hasVoted={!!player.vote && !game.revealCards}
-                      vote={player.vote}
-                      isRevealed={game.revealCards}
-                      isCurrentPlayer={player.id === currentPlayer?.id}
-                    />
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            {/* Decorative poker suit symbols in corners */}
-            <div className="absolute top-4 left-4 text-white/10 text-4xl select-none">♠</div>
-            <div className="absolute top-4 right-4 text-white/10 text-4xl select-none">♥</div>
-            <div className="absolute bottom-4 left-4 text-white/10 text-4xl select-none">♦</div>
-            <div className="absolute bottom-4 right-4 text-white/10 text-4xl select-none">♣</div>
-          </motion.div>
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={staggerContainer}
+        className="relative"
+        style={{
+          width: '100%',
+          paddingBottom: '62.5%', // 16:10 aspect ratio for oval
+          minHeight: '300px'
+        }}
+      >
+        {/* Players positioned in an oval */}
+        <div className="absolute inset-0">
+          {game.players.map((player, index) => {
+            const { x, y } = getPlayerPosition(index, game.players.length);
+            return (
+              <motion.div
+                key={player.id}
+                variants={fadeIn}
+                className="absolute"
+                style={{
+                  left: `${x}%`,
+                  top: `${y}%`,
+                  transform: 'translate(-50%, -50%)'
+                }}
+              >
+                <PlayerAvatar
+                  name={player.name}
+                  isHost={player.isHost}
+                  hasVoted={!!player.vote && !game.revealCards}
+                  vote={player.vote}
+                  isRevealed={game.revealCards}
+                  isCurrentPlayer={player.id === currentPlayer?.id}
+                />
+              </motion.div>
+            );
+          })}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
