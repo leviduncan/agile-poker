@@ -23,7 +23,73 @@ const CurrentStory: React.FC = () => {
   const [finalEstimate, setFinalEstimate] = useState<string>('');
   const [consensusLevel, setConsensusLevel] = useState<'none' | 'strong' | 'perfect'>('none');
   const [consensusPercentage, setConsensusPercentage] = useState<number>(0);
+  const [consensusVote, setConsensusVote] = useState<string>('');
   const hasTriggeredConfetti = useRef(false);
+
+  // Calculate consensus when cards are revealed
+  useEffect(() => {
+    if (!game || !currentStory || currentStory.status !== 'revealed') {
+      setConsensusLevel('none');
+      setConsensusPercentage(0);
+      setConsensusVote('');
+      return;
+    }
+
+    const votes = game.players.map(p => p.vote).filter(Boolean) as string[];
+    const voteCounts = votes.reduce((acc, vote) => {
+      acc[vote] = (acc[vote] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    let maxCount = 0;
+    let topVote = '';
+    Object.entries(voteCounts).forEach(([vote, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        topVote = vote;
+      }
+    });
+
+    setConsensusVote(topVote);
+
+    const totalVotes = votes.length;
+    if (totalVotes > 1) {
+      const percentage = Math.round((maxCount / totalVotes) * 100);
+      setConsensusPercentage(percentage);
+      
+      if (percentage === 100) {
+        setConsensusLevel('perfect');
+      } else if (percentage >= 75) {
+        setConsensusLevel('strong');
+      } else {
+        setConsensusLevel('none');
+      }
+    } else {
+      setConsensusLevel('none');
+      setConsensusPercentage(0);
+    }
+  }, [game, currentStory]);
+
+  // Trigger confetti when cards are revealed and consensus is detected
+  useEffect(() => {
+    const isRevealed = currentStory?.status === 'revealed';
+    
+    if (isRevealed && consensusLevel !== 'none' && !hasTriggeredConfetti.current) {
+      hasTriggeredConfetti.current = true;
+      
+      setTimeout(() => {
+        if (consensusLevel === 'perfect') {
+          triggerPerfectConsensus();
+        } else if (consensusLevel === 'strong') {
+          triggerStrongConsensus();
+        }
+      }, 600);
+    }
+    
+    if (!isRevealed) {
+      hasTriggeredConfetti.current = false;
+    }
+  }, [currentStory?.status, consensusLevel]);
   
   if (!game) return null;
   
@@ -47,65 +113,6 @@ const CurrentStory: React.FC = () => {
   
   const isRevealed = currentStory.status === 'revealed';
   const allVoted = game.players.every(p => p.vote !== null);
-  
-  // Get the most common vote if cards are revealed
-  let consensusVote = '';
-  if (isRevealed) {
-    const votes = game.players.map(p => p.vote).filter(Boolean) as string[];
-    const voteCounts = votes.reduce((acc, vote) => {
-      acc[vote] = (acc[vote] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    let maxCount = 0;
-    Object.entries(voteCounts).forEach(([vote, count]) => {
-      if (count > maxCount) {
-        maxCount = count;
-        consensusVote = vote;
-      }
-    });
-
-    // Calculate consensus percentage
-    const totalVotes = votes.length;
-    if (totalVotes > 1) { // Only calculate consensus for 2+ players
-      const percentage = Math.round((maxCount / totalVotes) * 100);
-      setConsensusPercentage(percentage);
-      
-      if (percentage === 100) {
-        setConsensusLevel('perfect');
-      } else if (percentage >= 75) {
-        setConsensusLevel('strong');
-      } else {
-        setConsensusLevel('none');
-      }
-    } else {
-      setConsensusLevel('none');
-      setConsensusPercentage(0);
-    }
-  }
-
-  // Trigger confetti when cards are revealed and consensus is detected
-  useEffect(() => {
-    if (isRevealed && consensusLevel !== 'none' && !hasTriggeredConfetti.current) {
-      hasTriggeredConfetti.current = true;
-      
-      // Small delay to let the card flip animations complete first
-      setTimeout(() => {
-        if (consensusLevel === 'perfect') {
-          triggerPerfectConsensus();
-        } else if (consensusLevel === 'strong') {
-          triggerStrongConsensus();
-        }
-      }, 600);
-    }
-    
-    // Reset confetti trigger when voting restarts
-    if (!isRevealed) {
-      hasTriggeredConfetti.current = false;
-      setConsensusLevel('none');
-      setConsensusPercentage(0);
-    }
-  }, [isRevealed, consensusLevel]);
 
   // Handle estimate finalization with confetti
   const handleFinalizeEstimate = () => {
