@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Timer, Play } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 const TimerComponent: React.FC = () => {
   const {
     game,
@@ -58,19 +60,32 @@ const TimerComponent: React.FC = () => {
 
   // Show the timer with current time remaining
   if (remainingTime === null) {
-    return isHost && isVoting ? <Button variant="outline" onClick={startTimer} className="text-white border-white hover:bg-white/20">
-        <Play className="h-4 w-4 mr-2" />
-        Start Timer ({game?.timerDuration}s)
-      </Button> : <Button variant="outline" disabled className="hover-lift hover-glow pulse">
-        <Timer className="h-4 w-4 mr-2" />
-        Timer Ready
-      </Button>;
+    return <div className="flex items-center gap-2">
+        {isHost && isVoting ? <Button variant="outline" onClick={startTimer} className="text-white border-white hover:bg-white/20">
+            <Play className="h-4 w-4 mr-2" />
+            Start Timer ({game?.timerDuration}s)
+          </Button> : <Badge variant="outline" className="pulse">
+            <Timer className="h-4 w-4 mr-2" />
+            Waiting for host
+          </Badge>}
+      </div>;
   }
 
-  // Active timer display
-  return <div className={`flex items-center rounded-md border border-white px-3 py-1 ${remainingTime < 10 ? 'bg-red-500/20' : ''}`}>
-      <Timer className="h-4 w-4 mr-2" />
-      <span className="font-mono">{formatTime(remainingTime)}</span>
+  // Active timer display with progress bar
+  const progress = ((game?.timerDuration || 0) - remainingTime) / (game?.timerDuration || 1) * 100;
+  const isLowTime = remainingTime < 10;
+  
+  return <div className="flex flex-col gap-2 min-w-[200px]">
+      <div className="flex items-center justify-between">
+        <Badge variant={isLowTime ? "destructive" : "default"} className="animate-pulse">
+          <Timer className="h-4 w-4 mr-2" />
+          {isLowTime ? "Time Running Out!" : "Timer Active"}
+        </Badge>
+        <span className={`font-mono text-lg font-bold ${isLowTime ? 'text-red-500 animate-pulse' : ''}`}>
+          {formatTime(remainingTime)}
+        </span>
+      </div>
+      <Progress value={progress} className={isLowTime ? 'bg-red-500/20' : ''} />
     </div>;
 };
 export default TimerComponent;
