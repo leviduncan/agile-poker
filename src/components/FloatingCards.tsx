@@ -11,28 +11,28 @@ const FloatingCards: React.FC = () => {
     initialY: Math.random() * 100,
     duration: 15 + Math.random() * 10,
     delay: Math.random() * 5,
-    scale: 0.6 + Math.random() * 0.4,
+    scale: 0.7 + Math.random() * 0.4,
     rotation: Math.random() * 360
   }));
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
       {cards.map((card) => (
         <motion.div
           key={card.id}
-          className="absolute glass rounded-xl shadow-lg border border-primary/20"
+          className="absolute glass rounded-xl shadow-xl border border-primary/30"
           style={{
             left: `${card.initialX}%`,
             top: `${card.initialY}%`,
-            width: '80px',
-            height: '110px',
+            width: '100px',
+            height: '140px',
             transform: `rotate(${card.rotation}deg) scale(${card.scale})`
           }}
           animate={{
             y: [0, -100, 0],
             x: [0, Math.random() * 50 - 25, 0],
             rotate: [card.rotation, card.rotation + 360],
-            opacity: [0.3, 0.7, 0.3]
+            opacity: [0.4, 0.8, 0.4]
           }}
           transition={{
             duration: card.duration,
