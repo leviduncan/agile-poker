@@ -21,79 +21,47 @@ const PlayerList: React.FC = () => {
     );
   }
 
-  // Calculate player positions in an oval arrangement
-  const getPlayerPosition = (index: number, total: number) => {
-    const angle = (index / total) * 2 * Math.PI - Math.PI / 2; // Start from top
-    const radiusX = 42; // Horizontal radius percentage
-    const radiusY = 35; // Vertical radius percentage
-    const x = 50 + radiusX * Math.cos(angle);
-    const y = 50 + radiusY * Math.sin(angle);
-    return { x, y };
-  };
-
   return (
     <div className="relative w-full max-w-5xl mx-auto mb-8 px-4">
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={staggerContainer}
-        className="relative"
-        style={{
-          width: '100%',
-          paddingBottom: '62.5%', // 16:10 aspect ratio for oval
-          minHeight: '300px'
-        }}
-      >
-        {/* Players positioned in an oval */}
-        <div className="absolute inset-0">
-          <AnimatePresence mode="popLayout">
-            {game.players.map((player, index) => {
-              const { x, y } = getPlayerPosition(index, game.players.length);
-              return (
-                <motion.div
-                  key={player.id}
-                  initial={{ 
-                    opacity: 0, 
-                    scale: 0.5,
-                    y: -50
-                  }}
-                  animate={{ 
-                    opacity: 1, 
-                    scale: 1,
-                    y: 0
-                  }}
-                  exit={{ 
-                    opacity: 0, 
-                    scale: 0.5,
-                    y: 50
-                  }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 25,
-                    opacity: { duration: 0.3 }
-                  }}
-                  className="absolute"
-                  style={{
-                    left: `${x}%`,
-                    top: `${y}%`,
-                    transform: 'translate(-50%, -50%)'
-                  }}
-                >
-                  <PlayerAvatar
-                    name={player.name}
-                    isHost={player.isHost}
-                    hasVoted={!!player.vote && !game.revealCards}
-                    vote={player.vote}
-                    isRevealed={game.revealCards}
-                    isCurrentPlayer={player.id === currentPlayer?.id}
-                  />
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
-      </motion.div>
+      <div className="flex flex-wrap justify-center items-center gap-6">
+        <AnimatePresence mode="popLayout">
+          {game.players.map((player) => (
+            <motion.div
+              key={player.id}
+              initial={{ 
+                opacity: 0, 
+                scale: 0.5,
+                y: -50
+              }}
+              animate={{ 
+                opacity: 1, 
+                scale: 1,
+                y: 0
+              }}
+              exit={{ 
+                opacity: 0, 
+                scale: 0.5,
+                y: 50
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 25,
+                opacity: { duration: 0.3 }
+              }}
+            >
+              <PlayerAvatar
+                name={player.name}
+                isHost={player.isHost}
+                hasVoted={!!player.vote && !game.revealCards}
+                vote={player.vote}
+                isRevealed={game.revealCards}
+                isCurrentPlayer={player.id === currentPlayer?.id}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };
