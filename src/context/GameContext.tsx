@@ -1,6 +1,5 @@
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useSocket } from './SocketContext';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
 export interface Player {
@@ -22,6 +21,7 @@ export interface Story {
 export interface Game {
   id: string;
   name: string;
+  inviteCode: string;
   players: Player[];
   stories: Story[];
   currentStoryId: string | null;
@@ -39,7 +39,7 @@ interface GameContextType {
   isVoting: boolean;
   hasVoted: boolean;
   createGame: (name: string, playerName: string) => Promise<string>;
-  joinGame: (gameId: string, playerName: string) => Promise<boolean>;
+  joinGame: (inviteCode: string, playerName: string) => Promise<boolean>;
   addStory: (title: string, description?: string) => void;
   selectStory: (storyId: string) => void;
   startVoting: (storyId: string) => void;
@@ -57,44 +57,93 @@ const GameContext = createContext<GameContextType>({} as GameContextType);
 
 export const useGame = () => useContext(GameContext);
 
-const createInitialGameState = (): Game => ({
-  id: '',
-  name: '',
-  players: [],
-  stories: [],
-  currentStoryId: null,
-  revealCards: false,
-  timerEnabled: false,
-  timerDuration: 45,
-  timerEndTime: null,
-});
+// Generate random invite code
+const generateInviteCode = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { socket } = useSocket();
   const { toast } = useToast();
   const [game, setGame] = useState<Game | null>(null);
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
+  const channelRef = useRef<any>(null);
 
-  // Initialize or load stored game data
-  useEffect(() => {
-    const storedGameState = localStorage.getItem('agilePokerGameState');
-    if (storedGameState) {
-      try {
-        const gameState = JSON.parse(storedGameState);
-        setGame(gameState);
-      } catch (err) {
-        console.error('Error parsing stored game state', err);
+  // Fetch complete game data from database
+  const fetchGameData = async (gameId: string) => {
+    try {
+      // Fetch game
+      const { data: gameData, error: gameError } = await supabase
+        .from('games')
+        .select('*')
+        .eq('id', gameId)
+        .single();
+
+      if (gameError) throw gameError;
+
+      // Fetch players
+      const { data: playersData, error: playersError } = await supabase
+        .from('players')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('created_at', { ascending: true });
+
+      if (playersError) throw playersError;
+
+      // Fetch stories
+      const { data: storiesData, error: storiesError } = await supabase
+        .from('stories')
+        .select('*')
+        .eq('game_id', gameId)
+        .order('created_at', { ascending: true });
+
+      if (storiesError) throw storiesError;
+
+      // Map database format to app format
+      const mappedGame: Game = {
+        id: gameData.id,
+        name: gameData.name,
+        inviteCode: gameData.invite_code,
+        currentStoryId: gameData.current_story_id,
+        revealCards: gameData.reveal_cards,
+        timerEnabled: gameData.timer_enabled,
+        timerDuration: gameData.timer_duration,
+        timerEndTime: gameData.timer_end_time,
+        players: playersData.map(p => ({
+          id: p.id,
+          name: p.name,
+          vote: p.current_vote,
+          isHost: p.is_host,
+          isActive: p.is_active
+        })),
+        stories: storiesData.map(s => ({
+          id: s.id,
+          title: s.title,
+          description: s.description || undefined,
+          status: s.status as 'pending' | 'voting' | 'revealed' | 'completed',
+          finalEstimate: s.final_estimate || undefined
+        }))
+      };
+
+      setGame(mappedGame);
+
+      // Update current player if exists
+      const storedPlayerId = localStorage.getItem('currentPlayerId');
+      if (storedPlayerId) {
+        const player = mappedGame.players.find(p => p.id === storedPlayerId);
+        if (player) {
+          setCurrentPlayer(player);
+        }
       }
+    } catch (error) {
+      console.error('Error fetching game data:', error);
     }
-  }, []);
-
-  // Save game state to localStorage when it changes
-  useEffect(() => {
-    if (game) {
-      localStorage.setItem('agilePokerGameState', JSON.stringify(game));
-    }
-  }, [game]);
+  };
 
   // Handle timer countdown
   useEffect(() => {
@@ -111,8 +160,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRemainingTime(0);
         clearInterval(interval);
         
-        // Auto-reveal cards when timer ends
-        if (game?.currentStoryId && !game.revealCards) {
+        // Auto-reveal cards when timer ends (only host)
+        if (game?.currentStoryId && !game.revealCards && isHost) {
           revealCards();
         }
       } else {
@@ -123,40 +172,52 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => clearInterval(interval);
   }, [game?.timerEndTime]);
 
-  // Set up socket event listeners
+  // Set up Supabase Realtime subscriptions
   useEffect(() => {
-    if (!socket) return;
+    if (!game?.id) return;
 
-    const onGameUpdate = (updatedGame: Game) => {
-      setGame(updatedGame);
-      
-      // Update current player
-      if (currentPlayer) {
-        const updatedPlayer = updatedGame.players.find(p => p.id === currentPlayer.id);
-        if (updatedPlayer) {
-          setCurrentPlayer(updatedPlayer);
+    // Clean up existing channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
+
+    const channel = supabase
+      .channel(`game:${game.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'games', filter: `id=eq.${game.id}` },
+        async () => {
+          await fetchGameData(game.id);
         }
-      }
-    };
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'players', filter: `game_id=eq.${game.id}` },
+        async () => {
+          await fetchGameData(game.id);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'stories', filter: `game_id=eq.${game.id}` },
+        async () => {
+          await fetchGameData(game.id);
+        }
+      )
+      .on('broadcast', { event: 'confetti' }, (payload) => {
+        window.dispatchEvent(new CustomEvent('triggerConfetti', { detail: payload.payload }));
+      })
+      .subscribe();
 
-    const onTriggerConfetti = (data: { type: 'perfect' | 'strong' | 'finalized' }) => {
-      // Dispatch browser event for confetti animation
-      window.dispatchEvent(new CustomEvent('triggerConfetti', { detail: data }));
-    };
-
-    // In our mock socket implementation, the .on() method returns a cleanup function
-    const cleanupFunction = socket.on('gameUpdate', onGameUpdate) as unknown as (() => void);
-    const confettiCleanup = socket.on('triggerConfetti', onTriggerConfetti) as unknown as (() => void);
+    channelRef.current = channel;
 
     return () => {
-      if (cleanupFunction) {
-        cleanupFunction();
-      }
-      if (confettiCleanup) {
-        confettiCleanup();
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
     };
-  }, [socket, currentPlayer]);
+  }, [game?.id]);
 
   // Helper function to get the current story
   const getCurrentStory = (): Story | null => {
@@ -166,93 +227,95 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Create a new game
   const createGame = async (name: string, playerName: string): Promise<string> => {
-    if (!socket) throw new Error('Socket not connected');
-
-    const gameId = `game-${Math.random().toString(36).substring(2, 9)}`;
-    const playerId = socket.id;
+    const inviteCode = generateInviteCode();
     
-    const newGame: Game = {
-      id: gameId,
-      name,
-      players: [
-        {
-          id: playerId,
+    try {
+      // Insert game
+      const { data: gameData, error: gameError } = await supabase
+        .from('games')
+        .insert({
+          name,
+          invite_code: inviteCode,
+        })
+        .select()
+        .single();
+
+      if (gameError) throw gameError;
+
+      // Insert host player
+      const { data: playerData, error: playerError } = await supabase
+        .from('players')
+        .insert({
+          game_id: gameData.id,
           name: playerName,
-          vote: null,
-          isHost: true,
-          isActive: true
-        }
-      ],
-      stories: [],
-      currentStoryId: null,
-      revealCards: false,
-      timerEnabled: false,
-      timerDuration: 45,
-      timerEndTime: null
-    };
+          is_host: true,
+        })
+        .select()
+        .single();
 
-    // Set game and player state
-    setGame(newGame);
-    setCurrentPlayer(newGame.players[0]);
-    
-    // Emit game created event
-    socket.emit('gameCreated', newGame);
-    
-    return gameId;
+      if (playerError) throw playerError;
+
+      // Store player ID locally
+      localStorage.setItem('currentPlayerId', playerData.id);
+      localStorage.setItem('currentGameId', gameData.id);
+
+      // Fetch and set complete game data
+      await fetchGameData(gameData.id);
+
+      return inviteCode;
+    } catch (error) {
+      console.error('Error creating game:', error);
+      toast({
+        title: "Error creating game",
+        description: "There was a problem creating the game",
+        variant: "destructive"
+      });
+      throw error;
+    }
   };
 
   // Join an existing game
-  const joinGame = async (gameId: string, playerName: string): Promise<boolean> => {
-    if (!socket) throw new Error('Socket not connected');
-
-    // In a real app, we'd fetch game data from the server
-    // For this demo, we'll use localStorage
-    const storedGameState = localStorage.getItem('agilePokerGameState');
-    if (!storedGameState) {
-      toast({
-        title: "Game not found",
-        description: "The game you're trying to join doesn't exist",
-        variant: "destructive"
-      });
-      return false;
-    }
-
+  const joinGame = async (inviteCode: string, playerName: string): Promise<boolean> => {
     try {
-      const gameState = JSON.parse(storedGameState) as Game;
-      if (gameState.id !== gameId) {
+      // Find game by invite code
+      const { data: gameData, error: gameError } = await supabase
+        .from('games')
+        .select('id')
+        .eq('invite_code', inviteCode.toUpperCase())
+        .single();
+
+      if (gameError || !gameData) {
         toast({
           title: "Game not found",
-          description: "The game you're trying to join doesn't exist",
+          description: "Invalid invite code",
           variant: "destructive"
         });
         return false;
       }
 
-      // Create new player
-      const newPlayer: Player = {
-        id: socket.id,
-        name: playerName,
-        vote: null,
-        isHost: false,
-        isActive: true
-      };
+      // Insert player
+      const { data: playerData, error: playerError } = await supabase
+        .from('players')
+        .insert({
+          game_id: gameData.id,
+          name: playerName,
+          is_host: false,
+        })
+        .select()
+        .single();
 
-      // Add player to game
-      const updatedGame = {
-        ...gameState,
-        players: [...gameState.players, newPlayer]
-      };
+      if (playerError) throw playerError;
 
-      // Update state
-      setGame(updatedGame);
-      setCurrentPlayer(newPlayer);
+      // Store player ID locally
+      localStorage.setItem('currentPlayerId', playerData.id);
+      localStorage.setItem('currentGameId', gameData.id);
 
-      // Emit game update event
-      socket.emit('gameUpdate', updatedGame);
-      
+      // Fetch and set complete game data
+      await fetchGameData(gameData.id);
+
       return true;
-    } catch (err) {
-      console.error('Error joining game', err);
+    } catch (error) {
+      console.error('Error joining game:', error);
       toast({
         title: "Error joining game",
         description: "There was a problem joining the game",
@@ -263,261 +326,272 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Add a new story
-  const addStory = (title: string, description?: string) => {
-    if (!game || !socket || !isHost) return;
+  const addStory = async (title: string, description?: string) => {
+    if (!game || !isHost) return;
 
-    const newStory: Story = {
-      id: `story-${Math.random().toString(36).substring(2, 9)}`,
-      title,
-      description,
-      status: 'pending'
-    };
+    try {
+      const { data: storyData, error } = await supabase
+        .from('stories')
+        .insert({
+          game_id: game.id,
+          title,
+          description: description || null,
+          status: 'pending'
+        })
+        .select()
+        .single();
 
-    const updatedGame = {
-      ...game,
-      stories: [...game.stories, newStory]
-    };
+      if (error) throw error;
 
-    // If this is the first story, set it as current
-    if (updatedGame.stories.length === 1) {
-      updatedGame.currentStoryId = newStory.id;
+      // If this is the first story, set it as current
+      if (game.stories.length === 0) {
+        await supabase
+          .from('games')
+          .update({ current_story_id: storyData.id })
+          .eq('id', game.id);
+      }
+    } catch (error) {
+      console.error('Error adding story:', error);
     }
-
-    setGame(updatedGame);
-    socket.emit('gameUpdate', updatedGame);
   };
 
   // Select a story for estimation
-  const selectStory = (storyId: string) => {
-    if (!game || !socket || !isHost) return;
+  const selectStory = async (storyId: string) => {
+    if (!game || !isHost) return;
 
-    const updatedGame = {
-      ...game,
-      currentStoryId: storyId,
-      revealCards: false,
-      timerEndTime: null
-    };
+    try {
+      // Update game's current story
+      await supabase
+        .from('games')
+        .update({
+          current_story_id: storyId,
+          reveal_cards: false,
+          timer_end_time: null
+        })
+        .eq('id', game.id);
 
-    // Reset all votes
-    updatedGame.players = game.players.map(player => ({
-      ...player,
-      vote: null
-    }));
-
-    setGame(updatedGame);
-    socket.emit('gameUpdate', updatedGame);
+      // Reset all votes
+      await supabase
+        .from('players')
+        .update({ current_vote: null })
+        .eq('game_id', game.id);
+    } catch (error) {
+      console.error('Error selecting story:', error);
+    }
   };
 
   // Start voting on a story
-  const startVoting = (storyId: string) => {
-    if (!game || !socket || !isHost) return;
+  const startVoting = async (storyId: string) => {
+    if (!game || !isHost) return;
 
-    const storyIndex = game.stories.findIndex(s => s.id === storyId);
-    if (storyIndex === -1) return;
+    try {
+      // Update story status
+      await supabase
+        .from('stories')
+        .update({ status: 'voting' })
+        .eq('id', storyId);
 
-    const updatedStories = [...game.stories];
-    updatedStories[storyIndex] = {
-      ...updatedStories[storyIndex],
-      status: 'voting'
-    };
+      // Reset all votes
+      await supabase
+        .from('players')
+        .update({ current_vote: null })
+        .eq('game_id', game.id);
 
-    const updatedGame = {
-      ...game,
-      stories: updatedStories,
-      currentStoryId: storyId,
-      revealCards: false
-    };
+      // Start timer if enabled
+      const timerEndTime = game.timerEnabled ? Date.now() + (game.timerDuration * 1000) : null;
 
-    // Reset all votes
-    updatedGame.players = game.players.map(player => ({
-      ...player,
-      vote: null
-    }));
-
-    // Start timer if enabled
-    if (updatedGame.timerEnabled) {
-      updatedGame.timerEndTime = Date.now() + (updatedGame.timerDuration * 1000);
+      await supabase
+        .from('games')
+        .update({
+          current_story_id: storyId,
+          reveal_cards: false,
+          timer_end_time: timerEndTime
+        })
+        .eq('id', game.id);
+    } catch (error) {
+      console.error('Error starting voting:', error);
     }
-
-    setGame(updatedGame);
-    socket.emit('gameUpdate', updatedGame);
   };
 
   // Cast a vote
-  const castVote = (value: string) => {
-    if (!game || !socket || !currentPlayer) return;
+  const castVote = async (value: string) => {
+    if (!currentPlayer) return;
 
-    const updatedPlayers = game.players.map(player =>
-      player.id === currentPlayer.id
-        ? { ...player, vote: value }
-        : player
-    );
-
-    const updatedGame = {
-      ...game,
-      players: updatedPlayers
-    };
-
-    setGame(updatedGame);
-    socket.emit('gameUpdate', updatedGame);
+    try {
+      await supabase
+        .from('players')
+        .update({ current_vote: value })
+        .eq('id', currentPlayer.id);
+    } catch (error) {
+      console.error('Error casting vote:', error);
+    }
   };
 
   // Reveal all cards
-  const revealCards = () => {
-    if (!game || !socket || !isHost) return;
+  const revealCards = async () => {
+    if (!game || !isHost) return;
 
-    const updatedGame = {
-      ...game,
-      revealCards: true,
-      timerEndTime: null
-    };
+    try {
+      await supabase
+        .from('games')
+        .update({
+          reveal_cards: true,
+          timer_end_time: null
+        })
+        .eq('id', game.id);
 
-    if (game.currentStoryId) {
-      const storyIndex = game.stories.findIndex(s => s.id === game.currentStoryId);
-      if (storyIndex !== -1) {
-        const updatedStories = [...game.stories];
-        updatedStories[storyIndex] = {
-          ...updatedStories[storyIndex],
-          status: 'revealed'
-        };
-        updatedGame.stories = updatedStories;
+      // Update current story status
+      if (game.currentStoryId) {
+        await supabase
+          .from('stories')
+          .update({ status: 'revealed' })
+          .eq('id', game.currentStoryId);
       }
-    }
 
-    setGame(updatedGame);
-    socket.emit('gameUpdate', updatedGame);
-
-    // Calculate consensus and emit confetti event for all players
-    const currentStory = updatedGame.stories.find(s => s.id === updatedGame.currentStoryId);
-    if (currentStory && currentStory.status === 'revealed') {
-      const votes = updatedGame.players.map(p => p.vote).filter(Boolean) as string[];
-      const voteCounts = votes.reduce((acc, vote) => {
-        acc[vote] = (acc[vote] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      const maxCount = Math.max(...Object.values(voteCounts));
-      const totalVotes = votes.length;
-      
-      if (totalVotes > 1) {
-        const percentage = Math.round((maxCount / totalVotes) * 100);
+      // Calculate consensus and broadcast confetti
+      const votes = game.players.map(p => p.vote).filter(Boolean) as string[];
+      if (votes.length > 1) {
+        const voteCounts = votes.reduce((acc, vote) => {
+          acc[vote] = (acc[vote] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
         
+        const maxCount = Math.max(...Object.values(voteCounts));
+        const percentage = Math.round((maxCount / votes.length) * 100);
+        
+        let confettiType: 'perfect' | 'strong' | null = null;
         if (percentage === 100) {
-          socket.emit('triggerConfetti', { type: 'perfect' });
+          confettiType = 'perfect';
         } else if (percentage >= 75) {
-          socket.emit('triggerConfetti', { type: 'strong' });
+          confettiType = 'strong';
+        }
+
+        if (confettiType && channelRef.current) {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'confetti',
+            payload: { type: confettiType }
+          });
         }
       }
+    } catch (error) {
+      console.error('Error revealing cards:', error);
     }
   };
 
   // Reset voting for current story
-  const resetVoting = () => {
-    if (!game || !socket || !isHost) return;
+  const resetVoting = async () => {
+    if (!game || !isHost) return;
 
-    const updatedPlayers = game.players.map(player => ({
-      ...player,
-      vote: null
-    }));
+    try {
+      // Reset all votes
+      await supabase
+        .from('players')
+        .update({ current_vote: null })
+        .eq('game_id', game.id);
 
-    const updatedGame = {
-      ...game,
-      players: updatedPlayers,
-      revealCards: false
-    };
-
-    if (game.currentStoryId) {
-      const storyIndex = game.stories.findIndex(s => s.id === game.currentStoryId);
-      if (storyIndex !== -1) {
-        const updatedStories = [...game.stories];
-        updatedStories[storyIndex] = {
-          ...updatedStories[storyIndex],
-          status: 'voting'
-        };
-        updatedGame.stories = updatedStories;
+      // Update story status back to voting
+      if (game.currentStoryId) {
+        await supabase
+          .from('stories')
+          .update({ status: 'voting' })
+          .eq('id', game.currentStoryId);
       }
-    }
 
-    // Reset timer if enabled
-    if (updatedGame.timerEnabled) {
-      updatedGame.timerEndTime = Date.now() + (updatedGame.timerDuration * 1000);
-    } else {
-      updatedGame.timerEndTime = null;
-    }
+      // Reset timer if enabled
+      const timerEndTime = game.timerEnabled ? Date.now() + (game.timerDuration * 1000) : null;
 
-    setGame(updatedGame);
-    socket.emit('gameUpdate', updatedGame);
+      await supabase
+        .from('games')
+        .update({
+          reveal_cards: false,
+          timer_end_time: timerEndTime
+        })
+        .eq('id', game.id);
+    } catch (error) {
+      console.error('Error resetting voting:', error);
+    }
   };
 
   // Finalize the estimate for a story
-  const finalizeEstimate = (storyId: string, estimate: string) => {
-    if (!game || !socket || !isHost) return;
+  const finalizeEstimate = async (storyId: string, estimate: string) => {
+    if (!game || !isHost) return;
 
-    const storyIndex = game.stories.findIndex(s => s.id === storyId);
-    if (storyIndex === -1) return;
+    try {
+      // Update story
+      await supabase
+        .from('stories')
+        .update({
+          status: 'completed',
+          final_estimate: estimate
+        })
+        .eq('id', storyId);
 
-    const updatedStories = [...game.stories];
-    updatedStories[storyIndex] = {
-      ...updatedStories[storyIndex],
-      status: 'completed',
-      finalEstimate: estimate
-    };
+      // Move to next story if available
+      const pendingStories = game.stories.filter(s => s.status === 'pending' && s.id !== storyId);
+      const nextStoryId = pendingStories.length > 0 ? pendingStories[0].id : null;
 
-    const updatedGame = {
-      ...game,
-      stories: updatedStories,
-      timerEndTime: null,
-      revealCards: false
-    };
+      await supabase
+        .from('games')
+        .update({
+          current_story_id: nextStoryId,
+          timer_end_time: null,
+          reveal_cards: false
+        })
+        .eq('id', game.id);
 
-    // Move to next story if available
-    if (updatedGame.currentStoryId === storyId) {
-      const pendingStories = updatedGame.stories.filter(s => s.status === 'pending');
-      if (pendingStories.length > 0) {
-        updatedGame.currentStoryId = pendingStories[0].id;
-      } else {
-        updatedGame.currentStoryId = null;
+      // Broadcast finalized confetti
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'confetti',
+          payload: { type: 'finalized' }
+        });
       }
+    } catch (error) {
+      console.error('Error finalizing estimate:', error);
     }
-
-    setGame(updatedGame);
-    socket.emit('gameUpdate', updatedGame);
-    socket.emit('triggerConfetti', { type: 'finalized' });
   };
 
   // Set timer settings
-  const setTimer = (enabled: boolean, duration?: number) => {
-    if (!game || !socket || !isHost) return;
+  const setTimer = async (enabled: boolean, duration?: number) => {
+    if (!game || !isHost) return;
 
-    const updatedGame = {
-      ...game,
-      timerEnabled: enabled,
-      timerDuration: duration || game.timerDuration,
-      timerEndTime: null
-    };
-
-    setGame(updatedGame);
-    socket.emit('gameUpdate', updatedGame);
+    try {
+      await supabase
+        .from('games')
+        .update({
+          timer_enabled: enabled,
+          timer_duration: duration || game.timerDuration,
+          timer_end_time: null
+        })
+        .eq('id', game.id);
+    } catch (error) {
+      console.error('Error setting timer:', error);
+    }
   };
 
   // Start the timer
-  const startTimer = () => {
-    if (!game || !socket || !isHost || !game.timerEnabled) return;
+  const startTimer = async () => {
+    if (!game || !isHost || !game.timerEnabled) return;
 
-    const updatedGame = {
-      ...game,
-      timerEndTime: Date.now() + (game.timerDuration * 1000)
-    };
-
-    setGame(updatedGame);
-    socket.emit('gameUpdate', updatedGame);
+    try {
+      await supabase
+        .from('games')
+        .update({
+          timer_end_time: Date.now() + (game.timerDuration * 1000)
+        })
+        .eq('id', game.id);
+    } catch (error) {
+      console.error('Error starting timer:', error);
+    }
   };
 
   // Copy invite link to clipboard
   const copyInviteLink = () => {
     if (!game) return;
     
-    const inviteLink = `${window.location.origin}/join/${game.id}`;
+    const inviteLink = `${window.location.origin}/join/${game.inviteCode}`;
     navigator.clipboard.writeText(inviteLink);
     
     toast({
@@ -525,6 +599,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       description: "Share this link with your team to invite them",
     });
   };
+
+  // Load game from localStorage on mount
+  useEffect(() => {
+    const storedGameId = localStorage.getItem('currentGameId');
+    if (storedGameId) {
+      fetchGameData(storedGameId);
+    }
+  }, []);
 
   // Derived state
   const isHost = !!currentPlayer?.isHost;

@@ -11,16 +11,16 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { staggerContainer, fadeIn } from "@/lib/animations";
 
 const GameRoom: React.FC = () => {
-  const { gameId } = useParams<{ gameId: string }>();
+  const { inviteCode } = useParams<{ inviteCode: string }>();
   const navigate = useNavigate();
   const { game, currentPlayer } = useGame();
 
   // Redirect if no game or current player
   useEffect(() => {
-    if (!game || game.id !== gameId || !currentPlayer) {
+    if (!game || game.inviteCode !== inviteCode || !currentPlayer) {
       navigate("/");
     }
-  }, [game, gameId, currentPlayer, navigate]);
+  }, [game, inviteCode, currentPlayer, navigate]);
 
   if (!game || !currentPlayer) {
     return (

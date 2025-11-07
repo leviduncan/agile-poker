@@ -13,7 +13,7 @@ import { fadeIn, scaleIn } from '@/lib/animations';
 import heroBackground from '@/assets/hero-background.jpg';
 
 const JoinGame: React.FC = () => {
-  const { gameId } = useParams<{ gameId: string }>();
+  const { inviteCode } = useParams<{ inviteCode: string }>();
   const navigate = useNavigate();
   const { joinGame } = useGame();
   
@@ -24,16 +24,16 @@ const JoinGame: React.FC = () => {
   const handleJoinGame = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!playerName.trim() || !gameId) return;
+    if (!playerName.trim() || !inviteCode) return;
     
     setIsLoading(true);
     setError('');
     
     try {
-      const success = await joinGame(gameId, playerName);
+      const success = await joinGame(inviteCode, playerName);
       
       if (success) {
-        navigate(`/game/${gameId}`);
+        navigate(`/game/${inviteCode}`);
       } else {
         setError('Unable to join game. It may no longer exist.');
       }

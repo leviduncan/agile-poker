@@ -26,8 +26,8 @@ const CreateGame: React.FC = () => {
     setIsLoading(true);
     
     try {
-      const gameId = await createGame(gameName, playerName);
-      navigate(`/game/${gameId}`);
+      const inviteCode = await createGame(gameName, playerName);
+      navigate(`/game/${inviteCode}`);
     } catch (error) {
       console.error('Error creating game', error);
       setIsLoading(false);

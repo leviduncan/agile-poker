@@ -14,7 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      games: {
+        Row: {
+          created_at: string | null
+          current_story_id: string | null
+          id: string
+          invite_code: string
+          name: string
+          reveal_cards: boolean | null
+          timer_duration: number | null
+          timer_enabled: boolean | null
+          timer_end_time: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_story_id?: string | null
+          id?: string
+          invite_code: string
+          name: string
+          reveal_cards?: boolean | null
+          timer_duration?: number | null
+          timer_enabled?: boolean | null
+          timer_end_time?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_story_id?: string | null
+          id?: string
+          invite_code?: string
+          name?: string
+          reveal_cards?: boolean | null
+          timer_duration?: number | null
+          timer_enabled?: boolean | null
+          timer_end_time?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      players: {
+        Row: {
+          created_at: string | null
+          current_vote: string | null
+          game_id: string
+          id: string
+          is_active: boolean | null
+          is_host: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_vote?: string | null
+          game_id: string
+          id?: string
+          is_active?: boolean | null
+          is_host?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_vote?: string | null
+          game_id?: string
+          id?: string
+          is_active?: boolean | null
+          is_host?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "players_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          final_estimate: string | null
+          game_id: string
+          id: string
+          status: Database["public"]["Enums"]["story_status"] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          final_estimate?: string | null
+          game_id: string
+          id?: string
+          status?: Database["public"]["Enums"]["story_status"] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          final_estimate?: string | null
+          game_id?: string
+          id?: string
+          status?: Database["public"]["Enums"]["story_status"] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stories_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +143,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      story_status: "pending" | "voting" | "revealed" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +270,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      story_status: ["pending", "voting", "revealed", "completed"],
+    },
   },
 } as const
