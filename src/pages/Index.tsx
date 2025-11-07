@@ -3,15 +3,12 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Users, Clock, ListTodo } from 'lucide-react';
-import Header from '@/components/Header';
 import Logo from '@/components/Logo';
 import FloatingCards from '@/components/FloatingCards';
 import heroBackground from '@/assets/hero-background.jpg';
 import { fadeIn, staggerContainer } from '@/lib/animations';
 const Index = () => {
   return <div className="min-h-screen flex flex-col">
-      <Header />
-      
       {/* Hero Section with Background */}
       <main className="flex-1 relative overflow-hidden">
         {/* Background Image with Overlay */}
