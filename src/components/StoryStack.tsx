@@ -62,23 +62,28 @@ const StoryStack: React.FC = () => {
     }
   }, [game, currentStory]);
 
-  // Trigger confetti when cards are revealed and consensus is detected
+  // Listen for confetti events from socket
   useEffect(() => {
-    const isRevealed = currentStory?.status === 'revealed';
-    if (isRevealed && consensusLevel !== 'none' && !hasTriggeredConfetti.current) {
-      hasTriggeredConfetti.current = true;
+    const handleConfettiEvent = (event: CustomEvent<{ type: 'perfect' | 'strong' | 'finalized' }>) => {
+      const { type } = event.detail;
+      
       setTimeout(() => {
-        if (consensusLevel === 'perfect') {
+        if (type === 'perfect') {
           triggerPerfectConsensus();
-        } else if (consensusLevel === 'strong') {
+        } else if (type === 'strong') {
           triggerStrongConsensus();
+        } else if (type === 'finalized') {
+          triggerEstimateFinalized();
         }
       }, 600);
-    }
-    if (!isRevealed) {
-      hasTriggeredConfetti.current = false;
-    }
-  }, [currentStory?.status, consensusLevel]);
+    };
+
+    window.addEventListener('triggerConfetti', handleConfettiEvent as EventListener);
+
+    return () => {
+      window.removeEventListener('triggerConfetti', handleConfettiEvent as EventListener);
+    };
+  }, []);
   if (!game) return null;
 
   // Get pending stories (not completed)

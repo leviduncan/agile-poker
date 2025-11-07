@@ -139,12 +139,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
+    const onTriggerConfetti = (data: { type: 'perfect' | 'strong' | 'finalized' }) => {
+      // Dispatch browser event for confetti animation
+      window.dispatchEvent(new CustomEvent('triggerConfetti', { detail: data }));
+    };
+
     // In our mock socket implementation, the .on() method returns a cleanup function
     const cleanupFunction = socket.on('gameUpdate', onGameUpdate) as unknown as (() => void);
+    const confettiCleanup = socket.on('triggerConfetti', onTriggerConfetti) as unknown as (() => void);
 
     return () => {
       if (cleanupFunction) {
         cleanupFunction();
+      }
+      if (confettiCleanup) {
+        confettiCleanup();
       }
     };
   }, [socket, currentPlayer]);
@@ -377,6 +386,29 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setGame(updatedGame);
     socket.emit('gameUpdate', updatedGame);
+
+    // Calculate consensus and emit confetti event for all players
+    const currentStory = updatedGame.stories.find(s => s.id === updatedGame.currentStoryId);
+    if (currentStory && currentStory.status === 'revealed') {
+      const votes = updatedGame.players.map(p => p.vote).filter(Boolean) as string[];
+      const voteCounts = votes.reduce((acc, vote) => {
+        acc[vote] = (acc[vote] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const maxCount = Math.max(...Object.values(voteCounts));
+      const totalVotes = votes.length;
+      
+      if (totalVotes > 1) {
+        const percentage = Math.round((maxCount / totalVotes) * 100);
+        
+        if (percentage === 100) {
+          socket.emit('triggerConfetti', { type: 'perfect' });
+        } else if (percentage >= 75) {
+          socket.emit('triggerConfetti', { type: 'strong' });
+        }
+      }
+    }
   };
 
   // Reset voting for current story
@@ -450,6 +482,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setGame(updatedGame);
     socket.emit('gameUpdate', updatedGame);
+    socket.emit('triggerConfetti', { type: 'finalized' });
   };
 
   // Set timer settings
