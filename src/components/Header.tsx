@@ -9,7 +9,7 @@ const Header: React.FC = () => {
   const { game, copyInviteLink } = useGame();
 
   return (
-    <header className="sticky top-0 z-50 glass border-b border-border/50 backdrop-blur-lg shadow-sm bg-white">
+    <header className="sticky top-0 z-50 border-b border-border/50 backdrop-blur-lg shadow-sm bg-white">
       <div className="container mx-auto flex justify-between items-center p-4">
         <Link to="/" className="text-xl font-bold flex items-center gap-3 group">
           <Logo size="sm" animated />
