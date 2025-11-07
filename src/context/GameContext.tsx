@@ -238,8 +238,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setGame(updatedGame);
       setCurrentPlayer(newPlayer);
 
-      // Emit player joined event
-      socket.emit('playerJoined', { gameId, player: newPlayer });
+      // Emit game update event
+      socket.emit('gameUpdate', updatedGame);
       
       return true;
     } catch (err) {
@@ -285,7 +285,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updatedGame = {
       ...game,
       currentStoryId: storyId,
-      revealCards: false
+      revealCards: false,
+      timerEndTime: null
     };
 
     // Reset all votes
@@ -358,7 +359,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const updatedGame = {
       ...game,
-      revealCards: true
+      revealCards: true,
+      timerEndTime: null
     };
 
     if (game.currentStoryId) {
@@ -431,7 +433,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const updatedGame = {
       ...game,
-      stories: updatedStories
+      stories: updatedStories,
+      timerEndTime: null,
+      revealCards: false
     };
 
     // Move to next story if available
