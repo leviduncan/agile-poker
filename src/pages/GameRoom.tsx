@@ -34,7 +34,7 @@ const GameRoom: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-400 via-slate-300 to-slate-600 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-300 via-slate-200 to-slate-400 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <Header />
 
       <main className="flex-1 p-4 md:p-6">
