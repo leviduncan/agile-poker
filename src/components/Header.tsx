@@ -20,7 +20,7 @@ const Header: React.FC = () => {
           <div className="flex items-center gap-4">
             <TimerComponent />
 
-            <Button variant="outline" onClick={copyInviteLink} className="hover-lift hover-glow">
+            <Button variant="outline" onClick={copyInviteLink} className="hover-lift hover-glow border-white">
               Invite Players
             </Button>
           </div>

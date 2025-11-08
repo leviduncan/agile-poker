@@ -31,7 +31,7 @@ const TimerComponent: React.FC = () => {
   if (!game?.timerEnabled) {
     return isHost ? <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="text-gray-900 hover:text-white border-white hover:bg-white/20">
+          <Button variant="outline" className="text-gray-900 hover-lift hover-glow border-white">
             <Timer className="h-4 w-4 mr-2" />
             Timer
           </Button>
