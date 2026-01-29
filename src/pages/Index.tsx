@@ -61,10 +61,10 @@ const Index = () => {
             A beautiful real-time Planning Poker app for development teams to collaboratively estimate task complexity
           </motion.p>
 
-          <div className="flex justify-center">
+          <div className="flex flex-col md:flex-row justify-center ">
             <motion.div variants={fadeIn}>
               <Link to="/create">
-                <Button size="lg" className="text-lg px-8 py-6 hover-lift hover-glow animate-glow-pulse">
+                <Button size="lg" className="w-full md:w-80 md:mx-2 mt-2 text-lg px-8 py-6 hover-lift hover-glow animate-glow-pulse">
                   Start a New Game
                   <ArrowRight className="ml-2" />
                 </Button>
@@ -72,7 +72,7 @@ const Index = () => {
             </motion.div>
             <motion.div variants={fadeIn}>
               <Link to="/join">
-                <Button size="lg" className="background-pink mx-4 text-lg px-8 py-6 hover-lift hover-glow-pink animate-glow-pulse">
+                <Button size="lg" className="w-full md:w-80 md:mx-2 mt-2 background-pink  text-lg px-8 py-6 hover-lift hover-glow animate-glow-pulse">
                   Join a Game
                   <ArrowRight className="ml-2" />
                 </Button>
