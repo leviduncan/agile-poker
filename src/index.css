@@ -140,6 +140,11 @@
   .hover-glow {
     @apply transition-all duration-300 hover:shadow-glow;
   }
+
+  .hover-glow-pink {
+    @apply transition-all duration-300 hover:shadow-glow;
+    background: oklch(60.194% 0.20234 322.924);
+  }
 }
 
 .poker-card {
@@ -163,4 +168,12 @@
 
 .poker-card-back {
   transform: rotateY(180deg);
+}
+
+
+.background-pink {
+  background: oklch(74% 0.238 322.16);
+}
+.background-pink:hover {
+  background: oklch(60.194% 0.20234 322.924);
 }

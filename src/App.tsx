@@ -11,6 +11,7 @@ import GameRoom from "./pages/GameRoom";
 import JoinGame from "./pages/JoinGame";
 import NotFound from "./pages/NotFound";
 
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -24,7 +25,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/create" element={<CreateGame />} />
             <Route path="/game/:inviteCode" element={<GameRoom />} />
-            <Route path="/join/:inviteCode" element={<JoinGame />} />
+            <Route path="/join" element={<JoinGame />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

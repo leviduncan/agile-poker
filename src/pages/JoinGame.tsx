@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useGame } from '@/context/GameContext';
 import { Button } from '@/components/ui/button';
@@ -13,10 +13,10 @@ import { fadeIn, scaleIn } from '@/lib/animations';
 import heroBackground from '@/assets/hero-background.jpg';
 
 const JoinGame: React.FC = () => {
-  const { inviteCode } = useParams<{ inviteCode: string }>();
   const navigate = useNavigate();
   const { joinGame } = useGame();
-  
+
+  const [inviteCode, setInviteCode] = useState('');
   const [playerName, setPlayerName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,7 +24,7 @@ const JoinGame: React.FC = () => {
   const handleJoinGame = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!playerName.trim() || !inviteCode) return;
+    if (!playerName.trim() || !inviteCode.trim()) return;
     
     setIsLoading(true);
     setError('');
@@ -72,6 +72,21 @@ const JoinGame: React.FC = () => {
             <CardContent>
               <form onSubmit={handleJoinGame} className="space-y-6">
                 <motion.div variants={fadeIn} className="space-y-2">
+                  <label htmlFor="inviteCode" className="text-sm font-medium">
+                    Invite Code
+                  </label>
+                  <Input
+                    id="inviteCode"
+                    placeholder="Enter 6-character code"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                    maxLength={6}
+                    required
+                    className="transition-all focus:ring-2 focus:ring-primary"
+                  />
+                </motion.div>
+
+                <motion.div variants={fadeIn} className="space-y-2">
                   <label htmlFor="playerName" className="text-sm font-medium">
                     Your Name
                   </label>
@@ -101,7 +116,7 @@ const JoinGame: React.FC = () => {
                   <Button 
                     type="submit" 
                     className="w-full hover-lift hover-glow"
-                    disabled={isLoading || !playerName.trim()}
+                    disabled={isLoading || !playerName.trim() || !inviteCode.trim()}
                   >
                     {isLoading ? (
                       <>
