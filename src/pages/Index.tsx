@@ -49,7 +49,7 @@ const Index = () => {
                 delay: 0.5
               }
             }}>
-              <Logo size="lg" animated={false} />
+              <div className="border overflow-hidden rounded-lg shadow-md"><Logo size="lg" animated={false} /></div>
             </motion.div>
           </motion.div>
 
